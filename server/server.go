@@ -6,14 +6,13 @@ import (
 	"log"
 	"net/http"
 
-	gobot "./goBot"
+	gobot "github.com/KingAkeem/goTor/server/goBot"
 )
 
 func linksHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	if r.Method == "GET" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		website := r.URL.Query().Get("url")
 		links, err := gobot.GetLinks(website, "127.0.0.1", "9050", 60)
 		if err != nil {
@@ -26,11 +25,8 @@ func linksHandler(w http.ResponseWriter, r *http.Request) {
 		err = json.NewEncoder(w).Encode(&links)
 		if err != nil {
 			log.Printf("Error: %+v", err)
-			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		return
 	}
 }
 
