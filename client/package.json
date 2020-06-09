@@ -29,6 +29,7 @@
     "axios": "^0.19.2",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
-    "react-hot-loader": "^4.12.20"
+    "react-hot-loader": "^4.12.20",
+    "react-window": "^1.8.5"
   }
 }
