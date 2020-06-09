@@ -1,18 +1,29 @@
 package gobot
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	urllib "net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/net/html"
 )
 
+// Client represents a GoBot HTTP client
 type Client interface {
 	Get(string) (*http.Response, error)
 	Head(string) (*http.Response, error)
+}
+
+// ClientConfig contains configuration for a client
+type ClientConfig struct {
+	addr    string
+	port    string
+	timeout int
 }
 
 type dualClient struct {
@@ -20,18 +31,31 @@ type dualClient struct {
 	torClient *http.Client
 }
 
-// Establishes tor connection for tcp
-func newTorClient(addr string, port string, timeout int) *dualClient {
-	var torProxy = "socks5://" + addr + ":" + port
-	torProxyURL, err := urllib.Parse(torProxy)
+const (
+	defaultHost    = "127.0.0.1"
+	defaultPort    = "9050"
+	defaultTimeout = 60
+)
+
+// NewTorClient creates an HTTP client capable of performing TOR requests.
+func newTorClient(config *ClientConfig) *dualClient {
+	if config.addr == "" {
+		config.addr = defaultHost
+	}
+
+	if config.port == "" {
+		config.port = defaultPort
+	}
+
+	torProxyURL, err := urllib.Parse(fmt.Sprintf("socks5://%s:%s", config.addr, config.port))
 	if err != nil {
-		log.Fatal("Error parsing Tor Proxy:", err)
+		log.Fatal("Unable to parse Tor Proxy URL. Error:", err)
 	}
 	torTransport := &http.Transport{Proxy: http.ProxyURL(torProxyURL)}
 
 	// Creating both clients for regular browsing and Tor
-	torc := http.Client{Transport: torTransport, Timeout: time.Second * time.Duration(timeout)}
-	regc := http.Client{Timeout: time.Second * time.Duration(timeout)}
+	torc := http.Client{Transport: torTransport, Timeout: time.Second * time.Duration(config.timeout)}
+	regc := http.Client{Timeout: time.Second * time.Duration(config.timeout)}
 	return &dualClient{regClient: &regc, torClient: &torc}
 
 }
@@ -52,42 +76,27 @@ func (d *dualClient) Get(url string) (*http.Response, error) {
 	return d.regClient.Get(url)
 }
 
-// Sends string to channel that contains a message that explains the
-// status of the url passed
-func checkURL(client Client, url string) (bool, error) {
-	var err error
-	var isURLAlive bool
-
-	resp, err := client.Head(url)
-	if err == nil && resp.StatusCode < 400 {
-		isURLAlive = true
-	} else {
-		isURLAlive = false
-	}
-	return isURLAlive, err
-}
-
-// Parses html attributes to find urls
-func parseAttrs(attributes []html.Attribute) []string {
-	var foundUrls = make([]string, 0)
+// Parses value to retrieve href
+func findHrefs(attributes []html.Attribute) []string {
+	foundUrls := make([]string, 0)
 	for i := 0; i < len(attributes); i++ {
-		url, err := urllib.ParseRequestURI(attributes[i].Val)
-		if url == nil || err != nil {
-			continue
-		}
-		log.Printf("%+v", url)
-		if attributes[i].Key == "href" && url.Scheme != "" {
-			foundUrls = append(foundUrls, url.String())
+		if attributes[i].Key == "href" {
+			url, err := urllib.ParseRequestURI(attributes[i].Val)
+			if url == nil || err != nil {
+				continue
+			}
+			if url.Scheme != "" {
+				foundUrls = append(foundUrls, url.String())
+			}
 		}
 	}
-
 	return foundUrls
 }
 
 // GetLinks returns a map that contains the links as keys and their statuses as values
-func GetLinks(searchURL string, addr string, port string, timeout int) (map[string]bool, error) {
+func GetLinks(searchURL string) (map[string]bool, error) {
 	// Creating new Tor connection
-	client := newTorClient(addr, port, timeout)
+	client := newTorClient(&ClientConfig{timeout: defaultTimeout})
 	resp, err := client.Get(searchURL)
 	if err != nil {
 		return nil, err
@@ -96,7 +105,7 @@ func GetLinks(searchURL string, addr string, port string, timeout int) (map[stri
 
 	// Begin parsing HTML
 	tokenizer := html.NewTokenizer(resp.Body)
-	var urls []string
+	totalUrls := make([]string, 0)
 	for notEnd := true; notEnd; {
 		currentTokenType := tokenizer.Next()
 		switch {
@@ -106,24 +115,28 @@ func GetLinks(searchURL string, addr string, port string, timeout int) (map[stri
 			token := tokenizer.Token()
 			// If link tag is found, append it to slice
 			if token.Data == "a" {
-				found := parseAttrs(token.Attr)
-				urls = append(urls, found...)
+				urlsFound := findHrefs(token.Attr)
+				totalUrls = append(totalUrls, urlsFound...)
 			}
 		}
 	}
 
-	if len(urls) == 0 {
-		return nil, nil
+	if len(totalUrls) == 0 {
+		return nil, errors.New("no links found for URL")
 	}
 
 	// Check all links and assign their status
-	linksWithStatus := make(map[string]bool, len(urls))
-	for _, url := range urls {
-		linksWithStatus[url], err = checkURL(client, url)
-		if err != nil {
-			panic(err)
-		}
+	linksWithStatus := make(map[string]bool)
+	var wg sync.WaitGroup
+	for _, url := range totalUrls {
+		wg.Add(1)
+		go func(url string) {
+			defer wg.Done()
+			resp, err := client.Head(url)
+			linksWithStatus[url] = err == nil && resp.StatusCode < 400
+		}(url)
 	}
+	wg.Wait()
 
 	return linksWithStatus, nil
 }

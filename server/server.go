@@ -9,12 +9,15 @@ import (
 	gobot "github.com/KingAkeem/goTor/server/goBot"
 )
 
-func linksHandler(w http.ResponseWriter, r *http.Request) {
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
+func getLinksHandler(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	if r.Method == "GET" {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		website := r.URL.Query().Get("url")
-		links, err := gobot.GetLinks(website, "127.0.0.1", "9050", 60)
+		links, err := gobot.GetLinks(website)
 		if err != nil {
 			log.Printf("Unable to retrieve links for %s. Error: %v", website, err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -24,14 +27,15 @@ func linksHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(&links)
 		if err != nil {
-			log.Printf("Error: %+v", err)
+			log.Printf("Unable to write response. Error: %+v", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	}
 }
 
 func main() {
-	http.HandleFunc("/", linksHandler)
+	http.HandleFunc("/", getLinksHandler)
 	fmt.Println("Serving on localhost:3050")
 	log.Fatal(http.ListenAndServe(":3050", nil))
 }
