@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	gobot "github.com/KingAkeem/goTor/server/goBot"
+	"github.com/KingAkeem/goTor/server/gobot"
 )
 
 func enableCors(w *http.ResponseWriter) {

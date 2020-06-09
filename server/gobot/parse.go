@@ -34,7 +34,7 @@ func parseHrefs(attributes []html.Attribute) []string {
 // GetLinks returns a map that contains the links as keys and their statuses as values
 func GetLinks(searchURL string) (map[string]bool, error) {
 	// Creating new Tor connection
-	client := newTorClient(&ClientConfig{timeout: defaultTimeout})
+	client := newDualClient(&ClientConfig{timeout: defaultTimeout})
 	resp, err := client.Get(searchURL)
 	if err != nil {
 		return nil, err

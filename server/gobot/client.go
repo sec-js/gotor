@@ -43,8 +43,8 @@ func (d *dualClient) Get(url string) (*http.Response, error) {
 	return d.regClient.Get(url)
 }
 
-// NewTorClient creates an HTTP client capable of performing TOR requests.
-func newTorClient(config *ClientConfig) *dualClient {
+// NewDualClient creates an HTTP client capable of performing TOR requests.
+func newDualClient(config *ClientConfig) *dualClient {
 	if config.addr == "" {
 		config.addr = defaultHost
 	}
@@ -59,9 +59,8 @@ func newTorClient(config *ClientConfig) *dualClient {
 	}
 	torTransport := &http.Transport{Proxy: http.ProxyURL(torProxyURL)}
 
-	// Creating both clients for regular browsing and Tor
-	torc := http.Client{Transport: torTransport, Timeout: time.Second * time.Duration(config.timeout)}
-	regc := http.Client{Timeout: time.Second * time.Duration(config.timeout)}
-	return &dualClient{regClient: &regc, torClient: &torc}
-
+	return &dualClient{
+		regClient: &http.Client{Timeout: time.Second * time.Duration(config.timeout)},
+		torClient: &http.Client{Transport: torTransport, Timeout: time.Second * time.Duration(config.timeout)},
+	}
 }
