@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+const (
+	defaultHost    = "127.0.0.1"
+	defaultPort    = "9050"
+	defaultTimeout = 600
+)
+
 // Client represents a GoBot HTTP client
 type Client interface {
 	Get(string) (*http.Response, error)

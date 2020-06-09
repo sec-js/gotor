@@ -8,12 +8,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-const (
-	defaultHost    = "127.0.0.1"
-	defaultPort    = "9050"
-	defaultTimeout = 60
-)
-
 // Parses value to retrieve href
 func parseHrefs(attributes []html.Attribute) []string {
 	foundUrls := make([]string, 0)
@@ -66,12 +60,15 @@ func GetLinks(searchURL string) (map[string]bool, error) {
 	// Check all links and assign their status
 	linksWithStatus := make(map[string]bool)
 	var wg sync.WaitGroup
+	var mux sync.RWMutex
 	for _, url := range totalUrls {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
 			resp, err := client.Head(url)
+			mux.Lock()
 			linksWithStatus[url] = err == nil && resp.StatusCode < 400
+			mux.Unlock()
 		}(url)
 	}
 	wg.Wait()
