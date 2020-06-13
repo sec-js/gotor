@@ -1,7 +1,16 @@
-import React, { Component, useState } from 'react';
+import React, { useState } from 'react';
 import { FixedSizeList } from 'react-window';
 import { ListItem, ListItemText } from '@material-ui/core'; 
 
+/*
+TODO - Needs to be fine tuned.
+*/
+const adjustHeight = height => height > window.innerHeight ? window.innerHeight : height;
+const calculateDimensions = items => ({
+    rowHeight: items.length > 20 ? 35 : 50,
+    totalHeight: adjustHeight(items.length * 50),
+    totalWidth: window.innerWidth * .8
+});
 
 export default function List(props) {
     const [items, setItems] = useState(props.items);
@@ -14,16 +23,10 @@ export default function List(props) {
         );
     }
 
-    /*
-    TODO - The list dimensions should be based off of the size of the screen rather than arbitrary numbers.
-    */
-    const fullRowSize = 50; 
-    const reducedRowSize = 35;
-    const hasManyItems = items.length > 20; 
-    const rowSize =  hasManyItems ? reducedRowSize : fullRowSize;
+    const { totalHeight, totalWidth, rowHeight } = calculateDimensions(items);
     return (
         <div>
-            <FixedSizeList height={500} width={450} itemSize={rowSize} itemCount={items.length}>
+            <FixedSizeList height={totalHeight} width={totalWidth} itemSize={rowHeight} itemCount={items.length}>
                 {renderRow}
             </FixedSizeList>
         </div>
