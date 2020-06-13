@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import React, { Component } from 'react';
+import React, { Component, useState } from 'react';
 import { hot } from 'react-hot-loader';
 
 import {
@@ -25,25 +25,17 @@ const getLinks = (url) => {
     return axios.get(`http://localhost:3050?url=${urlParam}`);
 };
 
-class App extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            url: '',
-            links: {},
-            selected: 'Get Links', 
-            options: ['Get Links', 'Analyze']
-        };
-        this.handleSubmit = this.handleSubmit.bind(this);
-        this.handleTextChange = this.handleTextChange.bind(this);
-        this.handleOptionChange = this.handleOptionChange.bind(this);
-    }
+function App(props) {
+    const [url, setUrl] = useState('');
+    const [links, setLinks] = useState({});
+    const [selected, setSelected] = useState('Get Links');
+    const [options, setOptions] = useState(['Get Links', 'Analyze']);
 
-    handleSubmit() {
-        switch (this.state.selected) {
+    function handleSubmit() {
+        switch (selected) {
             case 'Get Links':
-                getLinks(this.state.url)
-                    .then(({ data: links }) => this.setState({links}))
+                getLinks(url)
+                    .then(({ data: links }) => setLinks(links))
                     .catch(err => console.error(err));
                 break;
             case 'Analyze':
@@ -52,44 +44,38 @@ class App extends Component {
         }
     }
 
-    handleOptionChange(newOption) {
-        this.setState({
-            selected: newOption
-        });
+    function handleOptionChange(newOption) {
+        setSelected(newOption);
     }
 
-    handleTextChange(event) {
-        this.setState({
-            url: event.target.value
-        });
+    function handleTextChange(event) {
+        setUrl(event.target.value);
     }
 
-    render() {
-        const urls = Object.keys(this.state.links);
-        if (urls.length) {
-            return (
-                <div style={{
-                    position: 'absolute', left: '50%', top: '50%',
-                    transform: 'translate(-50%, -50%)'
-                }} className="App">
-                    <List items={urls}></List>
-                </div>
-            )
-        }
-
+    const urls = Object.keys(links);
+    if (urls.length) {
         return (
             <div style={{
                 position: 'absolute', left: '50%', top: '50%',
                 transform: 'translate(-50%, -50%)'
             }} className="App">
-                <MainTextField onChange={this.handleTextChange} label="URL" color="primary"/>
-                <br/>
-                <Selector onChange={this.handleOptionChange} list={this.state.options} label="Options" itemIndex={0}></Selector>
-                <br/>
-                <Button onClick={this.handleSubmit}>submit</Button>
+                <List items={urls}></List>
             </div>
-        );
+        )
     }
+
+    return (
+        <div style={{
+            position: 'absolute', left: '50%', top: '50%',
+            transform: 'translate(-50%, -50%)'
+        }} className="App">
+            <MainTextField onChange={handleTextChange} label="URL" color="primary"/>
+            <br/>
+            <Selector onChange={handleOptionChange} list={options} label="Options" itemIndex={0}></Selector>
+            <br/>
+            <Button onClick={handleSubmit}>submit</Button>
+        </div>
+    );
 }
 
 export default hot(module)(App);

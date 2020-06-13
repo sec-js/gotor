@@ -1,38 +1,28 @@
-import React, { Component } from 'react';
+import React, { useState } from 'react';
 import { 
     InputLabel,
     Select,
     MenuItem
 } from '@material-ui/core';
 
-class Selector extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            list: props.list,
-            label: props.label,
-            itemIndex: props.itemIndex
-        };
-        this.handleChange = this.handleChange.bind(this);
-    }
+export default function Selector(props) {
+    const [list, setList] = useState(props.list);
+    const [label, setLabel] = useState(props.label);
+    const [itemIndex, setItemIndex] = useState(props.itemIndex);
 
-    handleChange(event) {
-        this.setState({
+    function handleChange(event) {
+        setItemIndex({
             itemIndex: event.target.value
         });
-        this.props.onChange(this.state.list[event.target.value]);
+        props.onChange(list[itemIndex]);
     }
 
-    render() {
-        return (
-            <div>
-                <InputLabel id="torbotOptions">{this.state.label}</InputLabel>
-                <Select onChange={this.handleChange} id="torbotOptions" value={this.state.itemIndex}>
-                    {this.state.list.map((element, index) => <MenuItem key={index} value={index}>{element}</MenuItem>)}
-                </Select>
-            </div>
-        );
-    }
+    return (
+        <div>
+            <InputLabel id="torbotOptions">{label}</InputLabel>
+            <Select onChange={handleChange} id="torbotOptions" value={itemIndex}>
+                {list.map((element, index) => <MenuItem key={index} value={index}>{element}</MenuItem>)}
+            </Select>
+        </div>
+    );
 }
-
-export default Selector;
