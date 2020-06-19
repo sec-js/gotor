@@ -10,9 +10,9 @@ import {
 import { styled } from '@material-ui/styles';
 
 import {
-    List,
-    Selector
-}  from './components';
+    Selector,
+    LinkTable
+} from './components';
 
 import './App.css';
 
@@ -27,7 +27,7 @@ const getLinks = (url) => {
 
 function App(props) {
     const [url, setUrl] = useState('');
-    const [links, setLinks] = useState({});
+    const [links, setLinks] = useState([]);
     const [selected, setSelected] = useState('Get Links');
     const [options, setOptions] = useState(['Get Links', 'Analyze']);
 
@@ -52,14 +52,13 @@ function App(props) {
         setUrl(event.target.value);
     }
 
-    const urls = Object.keys(links);
-    if (urls.length) {
+    if (links.length) {
         return (
             <div style={{
                 position: 'absolute', left: '50%', top: '50%',
                 transform: 'translate(-50%, -50%)'
             }} className="App">
-                <List items={urls}></List>
+                <LinkTable items={links}></LinkTable>
             </div>
         )
     }

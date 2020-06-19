@@ -2,6 +2,7 @@ package gobot
 
 import (
 	"errors"
+	"log"
 	urllib "net/url"
 	"sync"
 
@@ -26,7 +27,10 @@ func parseHrefs(attributes []html.Attribute) []string {
 }
 
 // GetLinks returns a map that contains the links as keys and their statuses as values
-func GetLinks(searchURL string) (map[string]bool, error) {
+func GetLinks(searchURL string) ([]struct {
+	Link   string
+	Status bool
+}, error) {
 	// Creating new Tor connection
 	client := newDualClient(&ClientConfig{timeout: defaultTimeout})
 	resp, err := client.Get(searchURL)
@@ -58,7 +62,10 @@ func GetLinks(searchURL string) (map[string]bool, error) {
 	}
 
 	// Check all links and assign their status
-	linksWithStatus := make(map[string]bool)
+	linksWithStatus := make([]struct {
+		Link   string
+		Status bool
+	}, 0)
 	var wg sync.WaitGroup
 	var mux sync.RWMutex
 	for _, url := range totalUrls {
@@ -67,11 +74,15 @@ func GetLinks(searchURL string) (map[string]bool, error) {
 			defer wg.Done()
 			resp, err := client.Head(url)
 			mux.Lock()
-			linksWithStatus[url] = err == nil && resp.StatusCode < 400
+			linksWithStatus = append(linksWithStatus, struct {
+				Link   string
+				Status bool
+			}{Link: resp.Request.URL.String(), Status: err == nil && resp.StatusCode < 400})
 			mux.Unlock()
 		}(url)
 	}
 	wg.Wait()
 
+	log.Printf("linksWithStatus: %+v", linksWithStatus)
 	return linksWithStatus, nil
 }
