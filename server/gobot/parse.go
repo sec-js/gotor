@@ -1,7 +1,9 @@
 package gobot
 
 import (
-	"errors"
+	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"sync"
@@ -15,8 +17,15 @@ type LinkData struct {
 	Status bool
 }
 
+func closeConn(conn io.Closer) {
+	err := conn.Close()
+	if err != nil {
+		log.Printf("Error: %+v", err)
+	}
+}
+
 // Parses value to retrieve href
-func parseHrefs(attributes []html.Attribute) []string {
+func parseLinks(attributes []html.Attribute) []string {
 	links := make([]string, 0)
 	for i := 0; i < len(attributes); i++ {
 		if attributes[i].Key == "href" {
@@ -51,16 +60,15 @@ func processLinks(c Client, links []string, process processFunction) {
 }
 
 // GetLinks returns a map that contains the links as keys and their statuses as values
-func GetLinks(searchURL string) ([]LinkData, error) {
+func GetLinks(rootLink string) ([]LinkData, error) {
 	// Creating new Tor connection
 	client := newDualClient(&ClientConfig{timeout: defaultTimeout})
-	resp, err := client.Get(searchURL)
+	resp, err := client.Get(rootLink)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeConn(resp.Body)
 
-	// Begin parsing HTML
 	tokenizer := html.NewTokenizer(resp.Body)
 	links := make([]string, 0)
 	for notEnd := true; notEnd; {
@@ -70,16 +78,15 @@ func GetLinks(searchURL string) ([]LinkData, error) {
 			notEnd = false
 		case currentTokenType == html.StartTagToken:
 			token := tokenizer.Token()
-			// If link tag is found, append it to slice
+			// Parsing and collecting href attribute values from anchor tags
 			if token.Data == "a" {
-				linksFound := parseHrefs(token.Attr)
-				links = append(links, linksFound...)
+				links = append(links, parseLinks(token.Attr)...)
 			}
 		}
 	}
 
 	if len(links) == 0 {
-		return nil, errors.New("no links found for URL")
+		return nil, fmt.Errorf("no links found for %s", rootLink)
 	}
 
 	linkDataList := make([]LinkData, 0)
