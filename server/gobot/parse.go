@@ -2,24 +2,29 @@ package gobot
 
 import (
 	"errors"
-	"log"
-	urllib "net/url"
+	"net/url"
 	"sync"
 
 	"golang.org/x/net/html"
 )
+
+// Link ...
+type Link struct {
+	Name   string
+	Status bool
+}
 
 // Parses value to retrieve href
 func parseHrefs(attributes []html.Attribute) []string {
 	foundUrls := make([]string, 0)
 	for i := 0; i < len(attributes); i++ {
 		if attributes[i].Key == "href" {
-			url, err := urllib.ParseRequestURI(attributes[i].Val)
-			if url == nil || err != nil {
+			u, err := url.ParseRequestURI(attributes[i].Val)
+			if u == nil || err != nil {
 				continue
 			}
-			if url.Scheme != "" {
-				foundUrls = append(foundUrls, url.String())
+			if u.Scheme != "" {
+				foundUrls = append(foundUrls, u.String())
 			}
 		}
 	}
@@ -27,10 +32,7 @@ func parseHrefs(attributes []html.Attribute) []string {
 }
 
 // GetLinks returns a map that contains the links as keys and their statuses as values
-func GetLinks(searchURL string) ([]struct {
-	Link   string
-	Status bool
-}, error) {
+func GetLinks(searchURL string) ([]Link, error) {
 	// Creating new Tor connection
 	client := newDualClient(&ClientConfig{timeout: defaultTimeout})
 	resp, err := client.Get(searchURL)
@@ -61,28 +63,25 @@ func GetLinks(searchURL string) ([]struct {
 		return nil, errors.New("no links found for URL")
 	}
 
-	// Check all links and assign their status
-	linksWithStatus := make([]struct {
-		Link   string
-		Status bool
-	}, 0)
+	links := make([]Link, 0)
 	var wg sync.WaitGroup
 	var mux sync.RWMutex
-	for _, url := range totalUrls {
+	var link Link
+	for _, u := range totalUrls {
 		wg.Add(1)
-		go func(url string) {
+		go func(u string) {
 			defer wg.Done()
-			resp, err := client.Head(url)
+			resp, err := client.Head(u)
 			mux.Lock()
-			linksWithStatus = append(linksWithStatus, struct {
-				Link   string
-				Status bool
-			}{Link: resp.Request.URL.String(), Status: err == nil && resp.StatusCode < 400})
+			link = Link{
+				Name:   resp.Request.URL.String(),
+				Status: err == nil && resp.StatusCode < 400,
+			}
+			links = append(links, link)
 			mux.Unlock()
-		}(url)
+		}(u)
 	}
 	wg.Wait()
 
-	log.Printf("linksWithStatus: %+v", linksWithStatus)
-	return linksWithStatus, nil
+	return links, nil
 }

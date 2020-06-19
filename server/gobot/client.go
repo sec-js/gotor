@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	urllib "net/url"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -33,20 +33,20 @@ type dualClient struct {
 	torClient *http.Client
 }
 
-func (d *dualClient) Head(url string) (*http.Response, error) {
-	if strings.Contains(url, ".onion") {
-		return d.torClient.Head(url)
+func (d *dualClient) Head(link string) (*http.Response, error) {
+	if strings.Contains(link, ".onion") {
+		return d.torClient.Head(link)
 	}
 
-	return d.regClient.Head(url)
+	return d.regClient.Head(link)
 }
 
-func (d *dualClient) Get(url string) (*http.Response, error) {
-	if strings.Contains(url, ".onion") {
-		return d.torClient.Get(url)
+func (d *dualClient) Get(link string) (*http.Response, error) {
+	if strings.Contains(link, ".onion") {
+		return d.torClient.Get(link)
 	}
 
-	return d.regClient.Get(url)
+	return d.regClient.Get(link)
 }
 
 // NewDualClient creates an HTTP client capable of performing TOR requests.
@@ -59,7 +59,7 @@ func newDualClient(config *ClientConfig) *dualClient {
 		config.port = defaultPort
 	}
 
-	torProxyURL, err := urllib.Parse(fmt.Sprintf("socks5://%s:%s", config.addr, config.port))
+	torProxyURL, err := url.Parse(fmt.Sprintf("socks5://%s:%s", config.addr, config.port))
 	if err != nil {
 		log.Fatal("Unable to parse Tor Proxy URL. Error:", err)
 	}

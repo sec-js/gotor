@@ -14,7 +14,7 @@ export default function(props) {
 
     return (
         <div>
-            <TableContainer style={{width: window.outerWidth }} component={Paper}>
+            <TableContainer style={{width: window.innerWidth }} component={Paper}>
                 <Table>
                     <TableHead>
                         <TableRow>
@@ -24,8 +24,8 @@ export default function(props) {
                     </TableHead>
                     <TableBody>
                         {rows.map(row => (
-                            <TableRow key={row.Link}>
-                                <TableCell>{row.Link}</TableCell>
+                            <TableRow key={row.Name}>
+                                <TableCell>{row.Name}</TableCell>
                                 <TableCell>{row.Status.toString()}</TableCell>
                             </TableRow>
                         ))}
