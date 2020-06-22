@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 import React, { useState, useEffect } from 'react';
 import { hot } from 'react-hot-loader';
 
@@ -13,7 +11,7 @@ import {
     Selector,
     LinkTable
 } from './components';
-import { getConn } from './lib/websocket.ts';
+import { getConn } from './lib/websocket';
 
 import './App.css';
 
@@ -21,7 +19,7 @@ const MainTextField = styled(TextField)({
     'padding-bottom': '10%'
 });
 
-function App(props) {
+function App() {
     const [link, setLink] = useState('');
     const [links, setLinks] = useState([]);
     const [selected, setSelected] = useState('Get Links');
@@ -29,7 +27,7 @@ function App(props) {
 
     const ws = getConn();
     useEffect(() => {
-        ws.onmessage = e => {
+        ws.onmessage = (e: MessageEvent) => {
             const message = JSON.parse(e.data);
             switch (message.type) {
                 case 'GET_LINK_RESULT':
@@ -52,11 +50,11 @@ function App(props) {
         }
     }
 
-    function handleOptionChange(newOption) {
+    function handleOptionChange(newOption: string) {
         setSelected(newOption);
     }
 
-    function handleTextChange(event) {
+    function handleTextChange(event: React.ChangeEvent<HTMLInputElement>) {
         setLink(event.target.value);
     }
 

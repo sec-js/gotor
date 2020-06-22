@@ -5,15 +5,19 @@ import {
     MenuItem
 } from '@material-ui/core';
 
-export default function Selector(props) {
+type SelectorProps = {
+    list: string[];
+    label: string;
+    itemIndex: number;
+    onChange: (value: string) => void;
+}
+export default function Selector(props: SelectorProps) {
     const [list, setList] = useState(props.list);
     const [label, setLabel] = useState(props.label);
     const [itemIndex, setItemIndex] = useState(props.itemIndex);
 
-    function handleChange(event) {
-        setItemIndex({
-            itemIndex: event.target.value
-        });
+    function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
+        setItemIndex(parseInt(event.target.value));
         props.onChange(list[itemIndex]);
     }
 
@@ -21,7 +25,7 @@ export default function Selector(props) {
         <div>
             <InputLabel id="torbotOptions">{label}</InputLabel>
             <Select onChange={handleChange} id="torbotOptions" value={itemIndex}>
-                {list.map((element, index) => <MenuItem key={index} value={index}>{element}</MenuItem>)}
+                {list.map((item: string, index: number) => <MenuItem key={index} value={index}>{item}</MenuItem>)}
             </Select>
         </div>
     );

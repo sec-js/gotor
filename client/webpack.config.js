@@ -2,25 +2,33 @@ const path = require("path");
 const webpack = require("webpack");
 
 module.exports = {
-    entry: "./src/index.js",
+    entry: "./src/index.tsx",
     mode: "development",
     module: {
         rules: [{
-                test: /\.(js|jsx)$/,
-                exclude: /(node_modules|bower_components)/,
-                loader: "babel-loader",
-                options: {
-                    presets: ["@babel/env"]
-                }
-            },
-            {
-                test: /\.css$/,
-                use: ["style-loader", "css-loader"]
+            test: /\.ts(x?)$/,
+            exclude: /node_modules/,
+            use: [{
+                loader: "ts-loader"
+            }]
+        }, {
+            enforce: "pre",
+            test: /\.js$/,
+            loader: "source-map-loader"
+        }, {
+            test: /\.(js|jsx)$/,
+            exclude: /(node_modules|bower_components)/,
+            loader: "babel-loader",
+            options: {
+                presets: ["@babel/env"]
             }
-        ]
+        }, {
+            test: /\.css$/,
+            use: ["style-loader", "css-loader"]
+        }]
     },
     resolve: {
-        extensions: ["*", ".js", ".jsx"]
+        extensions: [".js", ".jsx", ".ts", ".tsx"]
     },
     output: {
         path: path.resolve(__dirname, "dist/"),
@@ -33,6 +41,10 @@ module.exports = {
         publicPath: "http://localhost:3000/dist/",
         hotOnly: true
     },
-    devtool: 'eval-source-map',
-    plugins: [new webpack.HotModuleReplacementPlugin()]
+    devtool: 'source-map',
+    plugins: [new webpack.HotModuleReplacementPlugin()],
+    externals: {
+        "react": "React",
+        "react-dom": "ReactDOM"
+    }
 };

@@ -1,5 +1,5 @@
-let c;
-const initConn = address =>
+let c: WebSocket;
+const initConn = (address: string): Promise<void> =>
     new Promise((accept, reject) => {
         c = new WebSocket(address);
         c.onopen = () => accept();
@@ -7,7 +7,7 @@ const initConn = address =>
     });
 
 
-const getConn = () => c;
+const getConn = (): WebSocket => c;
 
 export {
     getConn,
