@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Paper,
     Table,
@@ -10,7 +10,8 @@ import {
 } from '@material-ui/core';
 
 export default function(props) {
-    const [rows, setRows] = React.useState(props.items);
+    const [rows, setRows] = useState(props.items);
+    useEffect(() => setRows(props.items));
 
     return (
         <div>
@@ -23,8 +24,8 @@ export default function(props) {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {rows.map(row => (
-                            <TableRow key={row.Name}>
+                        {rows.map((row, index) => (
+                            <TableRow key={index}>
                                 <TableCell>{row.Name}</TableCell>
                                 <TableCell>{row.Status.toString()}</TableCell>
                             </TableRow>

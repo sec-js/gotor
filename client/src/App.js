@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { hot } from 'react-hot-loader';
 
 import {
@@ -13,6 +13,7 @@ import {
     Selector,
     LinkTable
 } from './components';
+import { getConn } from './lib/websocket.ts';
 
 import './App.css';
 
@@ -20,23 +21,30 @@ const MainTextField = styled(TextField)({
     'padding-bottom': '10%'
 });
 
-const getLinks = (url) => {
-    const urlParam = encodeURIComponent(url);
-    return axios.get(`http://localhost:3050?url=${urlParam}`);
-};
-
 function App(props) {
-    const [url, setUrl] = useState('');
+    const [link, setLink] = useState('');
     const [links, setLinks] = useState([]);
     const [selected, setSelected] = useState('Get Links');
     const [options, setOptions] = useState(['Get Links', 'Analyze']);
 
+    const ws = getConn();
+    useEffect(() => {
+        ws.onmessage = e => {
+            const message = JSON.parse(e.data);
+            switch (message.type) {
+                case 'GET_LINK_RESULT':
+                    setLinks([...links, message.linkData]);
+            }
+        };
+    });
+
     function handleSubmit() {
         switch (selected) {
             case 'Get Links':
-                getLinks(url)
-                    .then(({ data: links }) => setLinks(links))
-                    .catch(err => console.error(err));
+                ws.send(JSON.stringify({
+                    type: 'GET_LINKS',
+                    link
+                }));
                 break;
             case 'Analyze':
                 console.log('Analyzing links');
@@ -49,7 +57,7 @@ function App(props) {
     }
 
     function handleTextChange(event) {
-        setUrl(event.target.value);
+        setLink(event.target.value);
     }
 
     if (links.length) {
@@ -68,7 +76,7 @@ function App(props) {
             position: 'absolute', left: '50%', top: '50%',
             transform: 'translate(-50%, -50%)'
         }} className="App">
-            <MainTextField onChange={handleTextChange} label="URL" color="primary"/>
+            <MainTextField onChange={handleTextChange} label="Link" color="primary"/>
             <br/>
             <Selector onChange={handleOptionChange} list={options} label="Options" itemIndex={0}></Selector>
             <br/>

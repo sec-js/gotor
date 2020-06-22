@@ -1,35 +1,56 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/KingAkeem/goTor/server/gobot"
+	"github.com/gorilla/websocket"
 )
+
+var wsUpgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 func getLinksHandler(w http.ResponseWriter, r *http.Request) {
-	enableCors(&w)
-	if r.Method == "GET" {
-		website := r.URL.Query().Get("url")
-		links, err := gobot.GetLinks(website)
+	wsConn, _ := wsUpgrader.Upgrade(w, r, nil)
+	defer wsConn.Close()
+	for {
+		msg := struct {
+			Type string `json:"type"`
+			Link string `json:"link"`
+		}{}
+		err := wsConn.ReadJSON(&msg)
 		if err != nil {
-			log.Printf("Unable to retrieve links for %s. Error: %v", website, err)
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("Unable to decode WebSocket message. Error: %+v", err)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(&links)
+		linkChan, err := gobot.GetLinks(msg.Link)
 		if err != nil {
-			log.Printf("Unable to write response. Error: %+v", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("Unable to get links. Error: %+v", err)
 			return
+		}
+		for link := range linkChan {
+			err := wsConn.WriteJSON(struct {
+				Type     string     `json:"type"`
+				LinkData gobot.Link `json:"linkData"`
+			}{
+				Type:     "GET_LINK_RESULT",
+				LinkData: link,
+			})
+			if err != nil {
+				log.Printf("Unable to write to WebSocket connection. Error: %v", err)
+				return
+			}
 		}
 	}
 }

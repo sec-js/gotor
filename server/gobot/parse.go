@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"net/url"
-	"sync"
 
 	"golang.org/x/net/html"
 )
 
-// LinkData ...
-type LinkData struct {
+// Link ...
+type Link struct {
 	Name   string
 	Status bool
 }
@@ -41,26 +39,8 @@ func parseLinks(attributes []html.Attribute) []string {
 	return links
 }
 
-type processFunction func(*http.Response, error)
-
-func processLinks(c Client, links []string, process processFunction) {
-	var wg sync.WaitGroup
-	var mux sync.RWMutex
-	for _, link := range links {
-		wg.Add(1)
-		go func(l string) {
-			defer wg.Done()
-			resp, err := c.Head(l)
-			mux.Lock()
-			process(resp, err)
-			mux.Unlock()
-		}(link)
-	}
-	wg.Wait()
-}
-
 // GetLinks returns a map that contains the links as keys and their statuses as values
-func GetLinks(rootLink string) ([]LinkData, error) {
+func GetLinks(rootLink string) (chan Link, error) {
 	// Creating new Tor connection
 	client := newDualClient(&ClientConfig{timeout: defaultTimeout})
 	resp, err := client.Get(rootLink)
@@ -79,6 +59,7 @@ func GetLinks(rootLink string) ([]LinkData, error) {
 		case currentTokenType == html.StartTagToken:
 			token := tokenizer.Token()
 			// Parsing and collecting href attribute values from anchor tags
+
 			if token.Data == "a" {
 				links = append(links, parseLinks(token.Attr)...)
 			}
@@ -89,12 +70,15 @@ func GetLinks(rootLink string) ([]LinkData, error) {
 		return nil, fmt.Errorf("no links found for %s", rootLink)
 	}
 
-	linkDataList := make([]LinkData, 0)
-	processLinks(client, links, func(r *http.Response, e error) {
-		linkDataList = append(linkDataList, LinkData{
-			Name:   r.Request.URL.String(),
-			Status: e == nil && r.StatusCode < 400,
-		})
-	})
-	return linkDataList, nil
+	linkChan := make(chan Link)
+	for _, link := range links {
+		go func(link string) {
+			r, e := client.Head(link)
+			linkChan <- Link{
+				Name:   link,
+				Status: e == nil && r.StatusCode < 400,
+			}
+		}(link)
+	}
+	return linkChan, nil
 }
