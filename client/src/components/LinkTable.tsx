@@ -17,7 +17,7 @@ export default function(props: { items: Link[] }) {
 
     return (
         <div>
-            <TableContainer style={{width: window.innerWidth }} component={Paper}>
+            <TableContainer style={{width: window.innerWidth * .75, height: window.innerHeight * .75 }} component={Paper}>
                 <Table>
                     <TableHead>
                         <TableRow>
