@@ -8,24 +8,10 @@ import (
 	"net/http"
 
 	"github.com/KingAkeem/goTor/server/gobot"
-	"github.com/gorilla/websocket"
 )
-
-var wsUpgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
 
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-}
-
-type getLinksMsg struct {
-	Type string `json:"type"`
-	Link string `json:"link"`
 }
 
 func logErrMsg(w io.Writer, err error) {

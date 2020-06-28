@@ -5,14 +5,16 @@ import (
 	"io"
 	"log"
 	"net/url"
+	"sync"
+	"sync/atomic"
 
 	"golang.org/x/net/html"
 )
 
 // Link ...
 type Link struct {
-	Name   string
-	Status bool
+	Name   string `json:"name"`
+	Status bool   `json:"status"`
 }
 
 func closeConn(conn io.Closer) {
@@ -71,12 +73,21 @@ func GetLinks(rootLink string) ([]Link, error) {
 	}
 
 	linkCollection := make([]Link, len(links))
-	for i, link := range links {
-		resp, err := client.Head(link)
-		linkCollection[i] = Link{
-			Name:   link,
-			Status: err == nil && resp.StatusCode < 400,
-		}
+	var index int64
+	atomic.StoreInt64(&index, 0)
+	var wg sync.WaitGroup
+	for _, link := range links {
+		wg.Add(1)
+		go func(l string) {
+			resp, err := client.Head(l)
+			linkCollection[index] = Link{
+				Name:   l,
+				Status: err == nil && resp.StatusCode < 400,
+			}
+			atomic.AddInt64(&index, 1)
+			wg.Done()
+		}(link)
 	}
+	wg.Wait()
 	return linkCollection, nil
 }

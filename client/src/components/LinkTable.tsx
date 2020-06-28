@@ -9,7 +9,7 @@ import {
     TableRow
 } from '@material-ui/core';
 
-type Link = { Name: string, Status: boolean };
+type Link = { name: string, status: boolean };
 
 export default function(props: { items: Link[] }) {
     const [rows, setRows] = useState(props.items);
@@ -28,8 +28,8 @@ export default function(props: { items: Link[] }) {
                     <TableBody>
                         {rows.map((row: Link, index: number) => (
                             <TableRow key={index}>
-                                <TableCell>{row.Name}</TableCell>
-                                <TableCell>{row.Status.toString()}</TableCell>
+                                <TableCell>{row.name}</TableCell>
+                                <TableCell>{row.status.toString()}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
