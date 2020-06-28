@@ -40,7 +40,7 @@ func parseLinks(attributes []html.Attribute) []string {
 }
 
 // GetLinks returns a map that contains the links as keys and their statuses as values
-func GetLinks(rootLink string) (chan Link, error) {
+func GetLinks(rootLink string) ([]Link, error) {
 	// Creating new Tor connection
 	client := newDualClient(&ClientConfig{timeout: defaultTimeout})
 	resp, err := client.Get(rootLink)
@@ -70,15 +70,13 @@ func GetLinks(rootLink string) (chan Link, error) {
 		return nil, fmt.Errorf("no links found for %s", rootLink)
 	}
 
-	linkChan := make(chan Link)
-	for _, link := range links {
-		go func(link string) {
-			r, e := client.Head(link)
-			linkChan <- Link{
-				Name:   link,
-				Status: e == nil && r.StatusCode < 400,
-			}
-		}(link)
+	linkCollection := make([]Link, len(links))
+	for i, link := range links {
+		resp, err := client.Head(link)
+		linkCollection[i] = Link{
+			Name:   link,
+			Status: err == nil && resp.StatusCode < 400,
+		}
 	}
-	return linkChan, nil
+	return linkCollection, nil
 }
