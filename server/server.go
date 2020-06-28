@@ -21,8 +21,8 @@ func logErrMsg(err error) {
 func getLinksHandler(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "GET" {
-		link := r.URL.Query().Get("link")
-		links, err := gobot.GetLinks(link)
+		parent := r.URL.Query().Get("link")
+		children, err := gobot.GetLinks(parent)
 		if err != nil {
 			logErrMsg(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -30,7 +30,7 @@ func getLinksHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(&links)
+		err = json.NewEncoder(w).Encode(&children)
 		if err != nil {
 			logErrMsg(err)
 			w.WriteHeader(http.StatusInternalServerError)
