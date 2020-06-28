@@ -20,20 +20,47 @@ const MainTextField = styled(TextField)({
     'padding-bottom': '10%'
 });
 
+const isURL = (url: string): boolean => {
+    try {
+        const u = new URL(url);
+        if (!u) return false;
+        if (!u.hostname) return false;
+        if (!u.protocol) return false;
+    } catch (err) {
+        return false;
+    }
+
+    return true;
+}
+
 function App() {
     const [link, setLink] = useState('');
     const [links, setLinks] = useState([]);
     const [selected, setSelected] = useState('Get Links');
     const [options, setOptions] = useState(['Get Links', 'Analyze']);
     const [startLoad, setStartLoad] = useState(false);
+    const [hasError, setHasError] = useState(false);
+    const [errorText, setErrorText] =  useState('Error Found.');
 
     async function handleSubmit() {
+        if (!isURL(link)) {
+            setHasError(true);
+            setErrorText('URL is invalid.');
+            return;
+        }
         setStartLoad(true);
         switch (selected) {
             case 'Get Links':
-                    const resp = await axios.get(`http://localhost:3050?link=${link}`);
-                    setLinks(resp.data);
-                    setStartLoad(false);
+                    try {
+                        const resp = await axios.get(`http://localhost:3050?link=${link}`);
+                        setLinks(resp.data);
+                    } catch (err) {
+                        setHasError(true);
+                        setErrorText(err.message);
+                        return;
+                    } finally {
+                        setStartLoad(false);
+                    }
                 break;
             case 'Analyze':
                 console.log('Analyzing links');
@@ -46,6 +73,7 @@ function App() {
     }
 
     function handleTextChange(event: React.ChangeEvent<HTMLInputElement>) {
+        if (hasError) setHasError(false);
         setLink(event.target.value);
     }
 
@@ -79,7 +107,9 @@ function App() {
             position: 'absolute', left: '50%', top: '50%',
             transform: 'translate(-50%, -50%)'
         }} className="App">
-            <MainTextField onKeyDown={handleOnKeyDown} onChange={handleTextChange} label="Link" color="primary"/>
+            {hasError ?
+                <MainTextField error onKeyDown={handleOnKeyDown} onChange={handleTextChange} helperText={errorText} label="Link" color="primary"/> :
+                <MainTextField onKeyDown={handleOnKeyDown} onChange={handleTextChange} label="Link" color="primary"/>}
             <br/>
             <Selector onChange={handleOptionChange} list={options} label="Options" itemIndex={0}></Selector>
             <br/>
