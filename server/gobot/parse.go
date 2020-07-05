@@ -91,8 +91,12 @@ func mergeConverts(chans ...<-chan Link) <-chan Link {
 	return out
 }
 
-func startConvert(links []string, client *dualClient, numJobs int) <-chan Link {
+// JobsPerLink ...
+const JobsPerLink = 3
+
+func startConvert(links []string, client *dualClient) <-chan Link {
 	queue := genLinks(links)
+	numJobs := len(links) / JobsPerLink
 	jobs := make([]<-chan Link, numJobs)
 	for i := 0; i < numJobs; i++ {
 		jobs[i] = convertLinks(queue, client)
@@ -132,7 +136,7 @@ func GetLinks(rootLink string) ([]Link, error) {
 	}
 
 	linkCollection := make([]Link, 0)
-	for link := range startConvert(links, client, 4) {
+	for link := range startConvert(links, client) {
 		linkCollection = append(linkCollection, link)
 	}
 	return linkCollection, nil
