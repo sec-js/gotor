@@ -42,21 +42,27 @@ function App() {
     const [hasError, setHasError] = useState(false);
     const [errorText, setErrorText] =  useState('Error Found.');
 
+
+
+    const setNewError = (message: string) => {
+        setHasError(true);
+        setErrorText(message);
+    };
+
     async function handleSubmit() {
         if (!isURL(link)) {
-            setHasError(true);
-            setErrorText('URL is invalid.');
+            setNewError('URL is invalid.');
             return;
         }
         setStartLoad(true);
         switch (selected) {
             case 'Get Links':
                     try {
-                        const resp = await axios.get(`http://localhost:3050?link=${link}`);
-                        setLinks(resp.data);
+                        const response = await axios.get(`http://localhost:3050?link=${link}`);
+                        if (Array.isArray(response.data.length) && !response.data.length) throw new Error('No links found.');
+                        setLinks(response.data);
                     } catch (err) {
-                        setHasError(true);
-                        setErrorText(err.message);
+                        setNewError(err.message)
                         return;
                     } finally {
                         setStartLoad(false);
@@ -84,38 +90,37 @@ function App() {
         }
     }
 
-    if (startLoad) {
-        return <CircularProgress style={{
-                position: 'absolute', left: '50%', top: '50%',
-                transform: 'translate(-50%, -50%)'
-            }} className="App"/>;
+    switch (true) {
+        case startLoad:
+            return <CircularProgress style={{
+                    position: 'absolute', left: '50%', top: '50%',
+                    transform: 'translate(-50%, -50%)'
+                }} className="App"/>;
+        case links.length !== 0:
+            return (
+                <div style={{
+                    position: 'absolute', left: '50%', top: '50%',
+                    transform: 'translate(-50%, -50%)'
+                }} className="App">
+                    <LinkTable items={links}></LinkTable>
+                </div>
+            )
+        default:
+            return (
+                <div style={{
+                    position: 'absolute', left: '50%', top: '50%',
+                    transform: 'translate(-50%, -50%)'
+                }} className="App">
+                    {hasError ?
+                        <MainTextField error onKeyDown={handleOnKeyDown} onChange={handleTextChange} helperText={errorText} label="Link" color="primary"/> :
+                        <MainTextField onKeyDown={handleOnKeyDown} onChange={handleTextChange} label="Link" color="primary"/>}
+                    <br/>
+                    <Selector onChange={handleOptionChange} list={options} label="Options" itemIndex={0}></Selector>
+                    <br/>
+                    <Button onClick={handleSubmit}>submit</Button>
+                </div>
+            );
     }
-
-    if (links.length) {
-        return (
-            <div style={{
-                position: 'absolute', left: '50%', top: '50%',
-                transform: 'translate(-50%, -50%)'
-            }} className="App">
-                <LinkTable items={links}></LinkTable>
-            </div>
-        )
-    }
-
-    return (
-        <div style={{
-            position: 'absolute', left: '50%', top: '50%',
-            transform: 'translate(-50%, -50%)'
-        }} className="App">
-            {hasError ?
-                <MainTextField error onKeyDown={handleOnKeyDown} onChange={handleTextChange} helperText={errorText} label="Link" color="primary"/> :
-                <MainTextField onKeyDown={handleOnKeyDown} onChange={handleTextChange} label="Link" color="primary"/>}
-            <br/>
-            <Selector onChange={handleOptionChange} list={options} label="Options" itemIndex={0}></Selector>
-            <br/>
-            <Button onClick={handleSubmit}>submit</Button>
-        </div>
-    );
 }
 
 export default hot(module)(App);

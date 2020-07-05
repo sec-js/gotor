@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/url"
 	"sync"
-	"sync/atomic"
 
 	"golang.org/x/net/html"
 )
@@ -41,6 +40,66 @@ func parseLinks(attributes []html.Attribute) []string {
 	return links
 }
 
+func genLinks(links []string) <-chan string {
+	in := make(chan string)
+	go func() {
+		for _, link := range links {
+			in <- link
+		}
+		close(in)
+	}()
+	return in
+}
+
+func convertLinks(in <-chan string, client *dualClient) <-chan Link {
+	out := make(chan Link)
+
+	go func() {
+		for link := range in {
+			resp, err := client.Head(link)
+			out <- Link{
+				Name:   link,
+				Status: err == nil && resp.StatusCode < 400,
+			}
+		}
+		close(out)
+	}()
+	return out
+}
+
+func mergeConverts(chans ...<-chan Link) <-chan Link {
+	var wg sync.WaitGroup
+	out := make(chan Link)
+
+	merge := func(c <-chan Link) {
+		for link := range c {
+			out <- link
+		}
+		wg.Done()
+	}
+	wg.Add(len(chans))
+
+	for _, c := range chans {
+		go merge(c)
+	}
+
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+
+	return out
+}
+
+func startConvert(links []string, client *dualClient, numJobs int) <-chan Link {
+	queue := genLinks(links)
+	jobs := make([]<-chan Link, numJobs)
+	for i := 0; i < numJobs; i++ {
+		jobs[i] = convertLinks(queue, client)
+	}
+	return mergeConverts(jobs...)
+}
+
 // GetLinks returns a map that contains the links as keys and their statuses as values
 func GetLinks(rootLink string) ([]Link, error) {
 	// Creating new Tor connection
@@ -72,22 +131,9 @@ func GetLinks(rootLink string) ([]Link, error) {
 		return nil, fmt.Errorf("no links found for %s", rootLink)
 	}
 
-	linkCollection := make([]Link, len(links))
-	var index int64
-	atomic.StoreInt64(&index, 0)
-	var wg sync.WaitGroup
-	for _, link := range links {
-		wg.Add(1)
-		go func(l string) {
-			resp, err := client.Head(l)
-			linkCollection[index] = Link{
-				Name:   l,
-				Status: err == nil && resp.StatusCode < 400,
-			}
-			atomic.AddInt64(&index, 1)
-			wg.Done()
-		}(link)
+	linkCollection := make([]Link, 0)
+	for link := range startConvert(links, client, 4) {
+		linkCollection = append(linkCollection, link)
 	}
-	wg.Wait()
 	return linkCollection, nil
 }
